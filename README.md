@@ -1,19 +1,13 @@
 # vpn-fix
 
-![demo](http://g.recordit.co/7PSGvdZTkT.gif)
+Updates this fix to work on Linux. I will clean this up to _instead_ be multi-platform later.
 
-Do you use a (**insert favourite curse word here**) corporate VPN? Does it route all of your traffic and slow your life down?
+## Setup (Linux)
 
-This tool will fix that problem in less than five minutes...
+Clone this repo
 
-Only tested on OSX but it might work on linux if you're lucky.
-
-## Setup (OSX)
-
-clone this repo down:
-
-```
-$ git clone https://github.com/darahayes/vpn-fix
+```bash
+$ git clone https://github.com/Codesleuth/vpn-fix
 ```
 
 ### Whitelist
@@ -29,42 +23,31 @@ github.com
 5.6.7.8
 ```
 
-### Set the iface variable
+### Connect to your VPN
 
- For most OSX users your active network interface is `en0`.
+Connect and check your VPN has assumed the device ID of `ppp0`
 
-Double check by running `ifconfig` and finding which interface actually connects you to the internet.
-If it's not `en0` then modify line 5 of `vpn-fix` and set the `iface` variable to your actual interface.
-
-### Setup Script
-
-The `setup` script creates an alias command in your `~/.profile` that runs the `vpn-fix` script, passing in the whitelist.
-
-```
-$ ./setup
-alias created. Run source ~/.profile and then run vpnfix
+```bash
+$ route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.1.254   0.0.0.0         UG    596    0        0 enx18dbf25d268e
+1.1.1.1         0.0.0.0         255.255.255.255 UH    0      0        0 ppp0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1000   0        0 docker0
+172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
+172.18.0.0      0.0.0.0         255.255.0.0     U     0      0        0 br-c20ed15495cd
+192.168.1.0     0.0.0.0         255.255.255.0   U     100    0        0 enx18dbf25d268e
 ```
 
 ### Run
 
-Now whenever you connect to the VPN you can run `vpnfix`. It will prompt for your password.
+Run the `vpn-fix` script, which prints out the hosts it resolves.
 
-```
-dara@Daras-MacBook-Pro vpn-fixer $ vpnfix
-Removing Fortinet's route all the things rule
-delete net default: gateway ppp0
-Now route all the things through normal connection!
-add net default: gateway en0
-Now route only things in your whitelist through VPN
-Adding IP addresses for nearform.com to whitelist
-Adding IP addresses for github.com to whitelist
-Adding 1.2.3.4 to whitelist
-Adding 5.6.7.8 to whitelist
-add host 54.247.160.180: gateway ppp0
-add host 192.30.253.113: gateway ppp0
-add host 192.30.253.112: gateway ppp0
-add host 1.2.3.4: gateway ppp0
-add host 5.6.7.8: gateway ppp0
+```bash
+$ sudo ./vpn-fix
+
+Found 1.2.3.4 for host nearform.com
+Found 5.6.7.8 for host github.com
 ```
 
-You can also easily update your whitelist and and run again.
+You can also easily update your whitelist and and run again. The entries will be removed when you disconnect from the VPN so ensure you reconnect if you want to wipe out the list (or use `route del <ip>`).

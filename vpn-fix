@@ -1,45 +1,24 @@
 #!/usr/bin/env bash
 set -e
 
-# You might need to this
-iface=en0
-
-dir=$(cd `dirname $0` && pwd)
-# function to get absolute path of a file/dir
-abspath() {
-  echo $(cd ${1%/*} && echo $PWD/${1##*/})
-}
-
-host_whitelist_file=$(abspath $1)
-
-if [ -z $host_whitelist_file ]; then
-  echo "please specify a whitelist file"
-  exit 1
-fi
-
-route -n delete default -interface ppp0
-route add default -interface $iface
-
-host_whitelist=($(cat $host_whitelist_file))
+host_whitelist=($(cat whitelist.txt))
 ip_whitelist=()
 
 for host in ${host_whitelist[*]}
 do
   if [[ $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "Adding $host to whitelist"
     ip_whitelist+=($host)
   else
-    echo "Adding IP addresses for $host to whitelist"
     temp_list=($(dig +short $host))
     for ip in ${temp_list[*]}
     do
+      echo "Found $ip for host $host"
       ip_whitelist+=($ip)
     done
   fi
 done
 
-
 for address in ${ip_whitelist[*]}
 do
-  route add $address -interface ppp0
+  route add -net $address netmask 255.255.255.255 dev ppp0 || true
 done
