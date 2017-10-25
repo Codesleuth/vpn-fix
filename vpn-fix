@@ -18,7 +18,18 @@ do
   fi
 done
 
+existing_routes=($(route -n | grep -v '1.1.1.1' | grep '255\.255\.255\.255.*ppp0' | awk '{print $1}'))
+
+echo "Deleting existing routes..."
+for address in ${existing_routes[*]}
+do
+  route del -net $address netmask 255.255.255.255 dev ppp0 || true
+done
+
+echo "Adding new routes..."
 for address in ${ip_whitelist[*]}
 do
   route add -net $address netmask 255.255.255.255 dev ppp0 || true
 done
+
+echo "Done."
