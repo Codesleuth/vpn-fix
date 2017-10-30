@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-host_whitelist=($(cat whitelist.txt))
+host_whitelist=($(cat whitelist.txt | grep -v ".*#.*" | grep -v "^$"))
 ip_whitelist=()
 vpn_nameserver=($(nmcli device show ppp0 | grep "IP4.ADDRESS" | awk '{print $2}' | cut -d'/' -f1))
 
-echo "VPN nameserver found to be $vpn_nameserver"
+echo "VPN nameserver found to be \e[35m$vpn_nameserver\e[0m"
 
 for host in ${host_whitelist[*]}
 do
@@ -15,24 +15,26 @@ do
     temp_list=($(dig $vpn_nameserver +short $host))
     for ip in ${temp_list[*]}
     do
-      echo "Found $ip for host $host"
-      ip_whitelist+=($ip)
+      if [[ $ip =~ ^([[:digit:]]{1,3}\.){3}[[:digit:]]{1,3}$ ]]; then
+        echo -e "Found\e[32m $ip\e[0m for host \e[35m$host\e[0m"
+        ip_whitelist+=($ip)
+      fi
     done
   fi
 done
 
 existing_routes=($(route -n | grep -v '1.1.1.1' | grep '255\.255\.255\.255.*ppp0' | awk '{print $1}'))
 
-echo "Deleting existing routes..."
+echo -e "\e[31mDeleting\e[0m existing routes..."
 for address in ${existing_routes[*]}
 do
   route del -net $address netmask 255.255.255.255 dev ppp0 || true
 done
 
-echo "Adding new routes..."
+echo -e "\e[32mAdding\e[0m new routes..."
 for address in ${ip_whitelist[*]}
 do
-  route add -net $address netmask 255.255.255.255 dev ppp0 || true
+  route add -net $address netmask 255.255.255.255 dev ppp0 > /dev/null 2>&1 || true
 done
 
 echo "Done."
