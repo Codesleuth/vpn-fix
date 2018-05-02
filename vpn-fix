@@ -2,24 +2,27 @@
 set -e
 
 host_whitelist=($(cat whitelist.txt | grep -v ".*#.*" | grep -v "^$"))
-ip_whitelist=()
+ip_routes=()
 vpn_nameserver=($(nmcli device show ppp0 | grep "IP4.ADDRESS" | awk '{print $2}' | cut -d'/' -f1))
 
-echo "VPN nameserver found to be \e[35m$vpn_nameserver\e[0m"
+echo -e "VPN nameserver found: \e[35m$vpn_nameserver\e[0m"
+
+echo -e "Querying..."
 
 for host in ${host_whitelist[*]}
 do
   if [[ $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    ip_whitelist+=($host)
+    ip_routes+=($host)
   else
-    temp_list=($(dig $vpn_nameserver +short $host))
-    for ip in ${temp_list[*]}
+    ip_list=($(dig $vpn_nameserver +short $host))
+    for ip in ${ip_list[*]}
     do
       if [[ $ip =~ ^([[:digit:]]{1,3}\.){3}[[:digit:]]{1,3}$ ]]; then
-        echo -e "Found\e[32m $ip\e[0m for host \e[35m$host\e[0m"
-        ip_whitelist+=($ip)
+        echo -e "Host \e[35m$host\e[0m resolves to \e[32m$ip\e[0m"
+        ip_routes+=($ip)
       fi
     done
+    [ ${#ip_list[@]} -eq "0" ] && echo -e "\e[91mCould not resolve host \e[35m$host\e[0m"
   fi
 done
 
@@ -32,7 +35,7 @@ do
 done
 
 echo -e "\e[32mAdding\e[0m new routes..."
-for address in ${ip_whitelist[*]}
+for address in ${ip_routes[*]}
 do
   route add -net $address netmask 255.255.255.255 dev ppp0 > /dev/null 2>&1 || true
 done
