@@ -11,7 +11,7 @@ echo -e "Querying..."
 
 for host in ${host_whitelist[*]}
 do
-  if [[ $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  if [[ $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(|\/[0-9]+)$ ]]; then
     ip_routes+=($host)
   else
     ip_list=($(dig $vpn_nameserver +short $host))
@@ -37,7 +37,11 @@ done
 echo -e "\e[32mAdding\e[0m new routes..."
 for address in ${ip_routes[*]}
 do
-  route add -net $address netmask 255.255.255.255 dev ppp0 > /dev/null 2>&1 || true
+  if [[ $address =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+$ ]]; then
+    route add -net $addresss dev ppp0
+  else
+    route add -net $address netmask 255.255.255.255 dev ppp0 > /dev/null 2>&1 || true
+  fi
 done
 
 echo "Done."
