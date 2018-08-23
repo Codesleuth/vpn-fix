@@ -38,7 +38,7 @@ echo -e "\e[32mAdding\e[0m new routes..."
 for address in ${ip_routes[*]}
 do
   if [[ $address =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+$ ]]; then
-    route add -net $addresss dev ppp0
+    route add -net $address dev ppp0
   else
     route add -net $address netmask 255.255.255.255 dev ppp0 > /dev/null 2>&1 || true
   fi
