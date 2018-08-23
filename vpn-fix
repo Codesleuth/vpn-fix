@@ -1,9 +1,47 @@
 #!/usr/bin/env bash
 set -e
 
-host_whitelist=($(cat whitelist.txt | grep -v ".*#.*" | grep -v "^$"))
+function detect_mac () {
+  [[ $OSTYPE =~ darwin ]] && echo 'true'
+}
+
+ismac=$(detect_mac)
+
+function get_nameserver () {
+  if [ $ismac = "true" ]; then
+    ifconfig ppp0 | grep "inet" | cut -d' ' -f2 | cat
+  else
+    nmcli device show ppp0 | grep "IP4.ADDRESS" | awk '{print $2}' | cut -d'/' -f1 | cat
+  fi
+}
+
+function delete_route () {
+  if [ $ismac = "true" ]; then
+    route -n delete $1 -interface ppp0 > /dev/null 2>&1 || true
+  else
+    route del -net $1 netmask 255.255.255.255 dev ppp0 || true
+  fi
+}
+
+function add_ip () {
+  if [ $ismac = "true" ]; then
+    route add -net $1 -interface ppp0 > /dev/null 2>&1 || true
+  else
+    route add -net $1 dev ppp0
+  fi
+}
+
+function add_hostip () {
+  if [ $ismac = "true" ]; then
+    route add $1 -interface ppp0 > /dev/null 2>&1 || true
+  else
+    route add -net $1 netmask 255.255.255.255 dev ppp0 > /dev/null 2>&1 || true
+  fi
+}
+
+host_whitelist=$(cat whitelist.txt | grep -v ".*#.*" | grep -v "^$")
 ip_routes=()
-vpn_nameserver=($(nmcli device show ppp0 | grep "IP4.ADDRESS" | awk '{print $2}' | cut -d'/' -f1))
+vpn_nameserver=$(get_nameserver)
 
 echo -e "VPN nameserver found: \e[35m$vpn_nameserver\e[0m"
 
@@ -26,21 +64,29 @@ do
   fi
 done
 
-existing_routes=($(route -n | grep -v '1.1.1.1' | grep '255\.255\.255\.255.*ppp0' | awk '{print $1}'))
+function get_existing_routes () {
+  if [ $ismac = "true" ]; then
+    netstat -nr -f inet | awk '{print $2, $1}' | grep 'ppp0' | awk '{print $2}' | cat
+  else
+    route -n | grep -v '1.1.1.1' | grep '255\.255\.255\.255.*ppp0' | awk '{print $1}' | cat
+  fi
+}
+
+existing_routes=$(get_existing_routes)
 
 echo -e "\e[31mDeleting\e[0m existing routes..."
 for address in ${existing_routes[*]}
 do
-  route del -net $address netmask 255.255.255.255 dev ppp0 || true
+  delete_route $address
 done
 
 echo -e "\e[32mAdding\e[0m new routes..."
 for address in ${ip_routes[*]}
 do
   if [[ $address =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+$ ]]; then
-    route add -net $address dev ppp0
+    add_ip $address
   else
-    route add -net $address netmask 255.255.255.255 dev ppp0 > /dev/null 2>&1 || true
+    add_hostip $address
   fi
 done
 
