@@ -49,7 +49,8 @@ echo -e "Querying..."
 
 for host in ${host_whitelist[*]}
 do
-  if [[ $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(|\/[0-9]+)$ ]]; then
+  if [[ $host =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+    echo -e "Host \e[35m$host\e[0m is ip address \e[32m$host\e[0m"
     ip_routes+=($host)
   else
     ip_list=($(dig $vpn_nameserver +short $host))
@@ -83,7 +84,7 @@ done
 echo -e "\e[32mAdding\e[0m new routes..."
 for address in ${ip_routes[*]}
 do
-  if [[ $address =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+$ ]]; then
+  if [[ $address =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
     add_ip $address
   else
     add_hostip $address
